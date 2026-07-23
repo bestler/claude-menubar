@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Build a release binary and assemble a menu-bar-only .app bundle,
-# ad-hoc signed so launch-at-login (SMAppService) works locally.
+# Build a release binary and assemble a menu-bar-only .app bundle.
+#
+# Signing:
+#   - If a "Developer ID Application" cert is present (or CODESIGN_IDENTITY is
+#     set), signs with the hardened runtime + secure timestamp so the app can
+#     be notarized (see scripts/release.sh).
+#   - Otherwise falls back to ad-hoc signing (fine for local dev only).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,13 +23,23 @@ cp ".build/release/${BIN_NAME}" "${BUNDLE}/Contents/MacOS/${BIN_NAME}"
 cp "Resources/Info.plist" "${BUNDLE}/Contents/Info.plist"
 [ -f "Resources/AppIcon.icns" ] && cp "Resources/AppIcon.icns" "${BUNDLE}/Contents/Resources/AppIcon.icns" || true
 
-echo "==> Ad-hoc code signing"
-codesign --force --deep --sign - "$BUNDLE"
+# Pick a signing identity: explicit override, else first Developer ID Application.
+IDENTITY="${CODESIGN_IDENTITY:-$(security find-identity -v -p codesigning \
+  | awk -F'"' '/Developer ID Application/{print $2; exit}')}"
+
+if [ -n "$IDENTITY" ]; then
+  echo "==> Signing with Developer ID (hardened runtime): $IDENTITY"
+  codesign --force --options runtime --timestamp \
+           --sign "$IDENTITY" "${BUNDLE}/Contents/MacOS/${BIN_NAME}"
+  codesign --force --options runtime --timestamp \
+           --sign "$IDENTITY" "$BUNDLE"
+  codesign --verify --strict --verbose=2 "$BUNDLE"
+else
+  echo "==> No Developer ID cert found — ad-hoc signing (local/dev only)"
+  echo "    (Create a Developer ID Application cert to produce a notarizable build.)"
+  codesign --force --deep --sign - "$BUNDLE"
+fi
 
 echo ""
 echo "Built: ${BUNDLE}"
-echo "Install with:"
-echo "  mv \"${BUNDLE}\" /Applications/"
-echo "  open \"/Applications/${APP_NAME}.app\""
-echo ""
-echo "Then use the menu-bar 'Launch at login' toggle (requires the app to live in /Applications)."
+echo "For a distributable, notarized build run: ./scripts/release.sh"
