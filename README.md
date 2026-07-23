@@ -65,18 +65,25 @@ open "/Applications/Claude Menubar.app"
 **Launch at login** (the menu toggle) uses `SMAppService` and only works from
 an installed `.app` in `/Applications`, not from `swift run`.
 
-## Homebrew (planned)
-
-Distribution will be a **cask** pointing at a released, zipped `.app`. Until the
-app is signed with a Developer ID and notarized, Gatekeeper will quarantine it;
-users would clear it with:
+## Install via Homebrew
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Claude Menubar.app"
+brew install --cask bestler/tap/claude-menubar
 ```
 
-A signed + notarized build removes that step. Cask skeleton lives in
-`Casks/` once a release is cut.
+The app is ad-hoc signed (not notarized), so the cask strips the download
+quarantine automatically via a `postflight` — no manual `xattr` step needed.
+A Developer ID signature + notarization would remove even that workaround; not
+worth it for a personal tool. Cask lives at
+[`bestler/homebrew-tap`](https://github.com/bestler/homebrew-tap).
+
+### Releasing a new version
+
+1. Bump `CFBundleShortVersionString` in `Resources/Info.plist`.
+2. `./scripts/build-app.sh`, then
+   `cd build && ditto -c -k --sequesterRsrc --keepParent "Claude Menubar.app" "Claude-Menubar-<v>.zip"`.
+3. `gh release create v<v> "build/Claude-Menubar-<v>.zip"`.
+4. In the tap, update `version` + `sha256` (`shasum -a 256 <zip>`) and push.
 
 ## Caveats
 
