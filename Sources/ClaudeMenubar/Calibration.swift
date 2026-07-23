@@ -108,14 +108,23 @@ final class CalibrationStore {
         defaults.removeObject(forKey: Key.resetCalibratedAt)
     }
 
-    /// Minutes until the calibrated reset, or nil if uncalibrated/expired.
+    /// Claude's session-limit window length. The countdown rolls by this amount
+    /// each time it lapses, so a single calibration keeps working across windows.
+    static let sessionWindowMinutes = 5 * 60
+
+    /// Minutes until the (possibly rolled-forward) calibrated reset, or nil if
+    /// never calibrated. Once the anchored reset passes we roll it forward in
+    /// whole 5h windows rather than expiring — so it "resets" on its own.
     func calibratedRemainingMinutes(now: Date = Date()) -> Int? {
-        guard let r = resetAt, r > now else { return nil }
+        guard var r = resetAt else { return nil }
+        let window = TimeInterval(Self.sessionWindowMinutes * 60)
+        while r <= now { r += window }
         return Int((r.timeIntervalSince(now) / 60).rounded())
     }
 
-    /// True when a reset was calibrated but its time has already passed.
-    func resetExpired(now: Date = Date()) -> Bool {
+    /// True when the countdown is now a rolled-forward window rather than the
+    /// originally-calibrated one (i.e. the anchor time has passed).
+    func resetHasRolled(now: Date = Date()) -> Bool {
         guard let r = resetAt else { return false }
         return r <= now
     }

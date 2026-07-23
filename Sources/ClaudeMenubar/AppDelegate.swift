@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         sessionCalibratedAt: self.calibration.sessionCalibratedAt
                     )
                     s.resetCalibrated = calibratedRemaining != nil
-                    s.resetExpired = calibratedRemaining == nil && self.calibration.resetExpired()
+                    s.resetRolled = calibratedRemaining != nil && self.calibration.resetHasRolled()
                     if wantWeek, let wk = self.ccusage.fetchCurrentWeekTokens() {
                         s.weekTokens = wk
                         s.weekPct = self.calibration.weekPct(forTokens: wk)
@@ -150,13 +150,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             if let rem = s.remainingMinutes {
                 if s.resetCalibrated {
-                    let note = calibration.resetCalibratedAt.map { " (calibrated \(Fmt.ago($0)))" } ?? ""
+                    let note: String
+                    if s.resetRolled {
+                        note = " (auto-rolled)"
+                    } else {
+                        note = calibration.resetCalibratedAt.map { " (calibrated \(Fmt.ago($0)))" } ?? ""
+                    }
                     addDisabled(menu, "Resets in: \(Fmt.duration(rem))\(note)")
                 } else {
                     addDisabled(menu, "Block ends in: ~\(Fmt.duration(rem)) (estimate)")
-                    if s.resetExpired {
-                        addDisabled(menu, "  ↳ reset calibration expired — recalibrate")
-                    }
                 }
             }
 
@@ -339,7 +341,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         let a = NSAlert()
         a.messageText = "Calibrate reset time"
-        a.informativeText = "Claude Code shows the real reset ('resets in …') from live API data that isn’t stored on disk, so it can’t be read automatically. Type what Claude Code shows and we’ll count down exactly for this window.\n\nFormats: 1h8 · 1h 8m · 1:08 · 68m"
+        a.informativeText = "Claude Code shows the real reset ('resets in …') from live API data that isn’t stored on disk, so it can’t be read automatically. Type what Claude Code shows and we’ll count down exactly for this window, then auto-roll every 5h.\n\nFormats: 1h8 · 1h 8m · 1:08 · 68m"
         a.addButton(withTitle: "Save")
         a.addButton(withTitle: "Cancel")
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))

@@ -49,10 +49,10 @@ struct UsageSnapshot {
     var tokensPerMinute: Double?
     /// Minutes until reset (calibrated value if available, else ccusage block estimate).
     var remainingMinutes: Int?
-    /// True when `remainingMinutes` comes from a user calibration (exact), false when it's the estimate.
+    /// True when `remainingMinutes` comes from a user calibration, false when it's the ccusage estimate.
     var resetCalibrated: Bool = false
-    /// True when a reset calibration existed but its window has rolled over.
-    var resetExpired: Bool = false
+    /// True when the calibrated countdown has rolled forward into a later window.
+    var resetRolled: Bool = false
 
     /// Session percentage — only present when a calibration exists.
     var sessionPct: Double?
