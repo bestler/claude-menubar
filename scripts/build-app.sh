@@ -42,4 +42,5 @@ fi
 
 echo ""
 echo "Built: ${BUNDLE}"
-echo "For a distributable, notarized build run: ./scripts/release.sh"
+echo "Install locally with:"
+echo "  mv \"${BUNDLE}\" /Applications/ && open \"/Applications/${APP_NAME}.app\""

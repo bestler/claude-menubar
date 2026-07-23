@@ -2,3 +2,7 @@
 build/
 *.xcodeproj
 .DS_Store
+
+# Maintainer-only release & signing tooling (kept out of the public repo)
+/scripts/release.sh
+/docs/

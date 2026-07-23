@@ -1,109 +1,119 @@
-# Claude Menubar
+<div align="center">
 
-A lightweight macOS menu-bar app that shows live Claude usage, powered by
-[`ccusage`](https://ccusage.com). Written in Swift (AppKit), no dock icon,
-minimal footprint.
+# 📊 Claude Menubar
 
-## What it shows
+**See your Claude usage at a glance — right from the macOS menu bar.**
 
-Because Anthropic exposes **no official plan quota**, this app never invents a
-fake "% of limit". By default it shows only numbers that are always correct:
+Live session cost, tokens, burn rate, and time-to-reset for Claude Code,
+Claude Pro & Max — a tiny native menu-bar app powered by
+[`ccusage`](https://github.com/ryoppippi/ccusage).
 
-- **Session cost** ($) and **tokens** for the active 5-hour block
-- **Burn rate** ($/hr and tokens/min)
-- **Time until the block resets**
+[![Latest release](https://img.shields.io/github/v/release/bestler/claude-menubar?sort=semver)](https://github.com/bestler/claude-menubar/releases)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000?logo=apple)](https://github.com/bestler/claude-menubar)
+[![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138?logo=swift&logoColor=white)](https://github.com/bestler/claude-menubar)
+[![License: MIT](https://img.shields.io/github/license/bestler/claude-menubar)](LICENSE)
 
-If you want a **percentage**, you calibrate it once against the number the
-Claude app itself shows you:
+</div>
 
-> "Calibrate Session %…" → enter the % the Claude app displays right now.
-> The app maps it to your current token count (`limit = tokens / (pct/100)`)
-> and shows a live % on every refresh afterward. Recalibrate any time it drifts.
+---
 
-Optional **weekly** tracking works the same way (calendar-week approximation —
-see caveat below).
+Ever wanted a quick answer to *"how much Claude have I burned this session, and
+when does it reset?"* without opening a terminal? This lives in your menu bar
+and just shows you — updating every few seconds.
 
-### Time-to-reset
-
-Claude's 5-hour limit is **account-wide** across every surface (Code, desktop,
-web, API). The true reset time is only in the **live API response headers**,
-which Claude Code reads in-memory and never writes to disk — so no local tool
-(this app or `ccusage`) can read it. `ccusage`'s block model is a floored-to-
-the-hour estimate that will not match Claude Code.
-
-So reset time is calibrated too:
-
-> "Calibrate reset time…" → type what Claude Code shows ("resets in 1h8").
-> The app anchors an exact reset timestamp and counts down precisely for that
-> window. When the window rolls over the value expires and falls back to the
-> `ccusage` block estimate (shown as `~2h47`), prompting you to recalibrate.
-
-## Requirements
-
-You need `ccusage` runnable. The app finds it automatically, in this order:
-
-1. A `ccusage` binary on disk (Homebrew, npm global, etc.)
-2. `bunx ccusage@latest` (if `bun` is installed)
-3. `npx -y ccusage@latest` (if `node` is installed)
-
-If none are found, the menu shows how to install one. GUI apps don't inherit
-your shell `PATH`, so the app searches common locations explicitly
-(`/opt/homebrew/bin`, nvm/bun/volta/fnm dirs, etc.).
-
-## Build & run
-
-```bash
-# Dev: build and run in the foreground
-./scripts/run-dev.sh
-
-# Release: build a proper .app bundle
-./scripts/build-app.sh
-mv "build/Claude Menubar.app" /Applications/
-open "/Applications/Claude Menubar.app"
+```
+ ┌─────────────────────────────────────┐
+ │ ● Active session                    │
+ │ Cost: $17.20                        │
+ │ Tokens: 7.2M                        │
+ │ Burn: $10.3/hr · 72k tok/min        │
+ │ Resets in: 1h 5m  (calibrated 3m…)  │
+ │ ─────────────────────────────────── │
+ │ Session: 41%                        │
+ │ ─────────────────────────────────── │
+ │ Menu bar shows          ▸           │
+ │ Refresh interval        ▸           │
+ │ Calibrate Session %…                │
+ │ Calibrate reset time…               │
+ │ Launch at login              ✓      │
+ │ Quit                                │
+ └─────────────────────────────────────┘
 ```
 
-**Launch at login** (the menu toggle) uses `SMAppService` and only works from
-an installed `.app` in `/Applications`, not from `swift run`.
+## Install
 
-## Install via Homebrew
-
-```bash
+```sh
 brew install --cask bestler/tap/claude-menubar
 ```
 
-The app is ad-hoc signed (not notarized), so the cask strips the download
-quarantine automatically via a `postflight` — no manual `xattr` step needed.
-A Developer ID signature + notarization would remove even that workaround; not
-worth it for a personal tool. Cask lives at
-[`bestler/homebrew-tap`](https://github.com/bestler/homebrew-tap).
+Or grab the notarized `.app` from the
+[latest release](https://github.com/bestler/claude-menubar/releases/latest),
+unzip, and drop it in `/Applications`.
 
-### Releasing a new version
+Then click the menu-bar icon and (optionally) toggle **Launch at login**.
 
-1. Bump `CFBundleShortVersionString` in `Resources/Info.plist`.
-2. `./scripts/build-app.sh`, then
-   `cd build && ditto -c -k --sequesterRsrc --keepParent "Claude Menubar.app" "Claude-Menubar-<v>.zip"`.
-3. `gh release create v<v> "build/Claude-Menubar-<v>.zip"`.
-4. In the tap, update `version` + `sha256` (`shasum -a 256 <zip>`) and push.
+## Requirements
 
-## Caveats
+The app reads your usage via the `ccusage` CLI. It finds it automatically — you
+only need **one** of these:
 
-- **Weekly window**: `ccusage`'s "week" is a calendar week (configurable start
-  day), not necessarily Anthropic's rolling 7-day limit window. Treat weekly %
-  as an approximation.
-- **Calibration drift**: the implied limit depends on model mix and cache
-  accounting, so recalibrate when the app's % diverges from what Claude shows.
+- `ccusage` installed (`brew install ccusage` or `npm i -g ccusage`), **or**
+- [`bun`](https://bun.sh) or [Node.js](https://nodejs.org) — it'll run
+  `ccusage` on demand via `bunx`/`npx`, no install needed.
 
-## Project layout
+If none are found, the menu tells you how to get one.
 
+## What it shows
+
+Everything in the top section is **always accurate**, straight from your local
+usage data:
+
+| Metric | Meaning |
+| --- | --- |
+| **Cost** | Spend in the current 5-hour session block |
+| **Tokens** | Total tokens used this block |
+| **Burn rate** | $/hour and tokens/minute right now |
+| **Resets in** | Time until the session window rolls over |
+
+Pick which one rides in the menu bar itself via **Menu bar shows ▸**.
+
+## Percentages & reset time — calibration
+
+Anthropic doesn't publish your plan's token quota anywhere, and the real reset
+clock only lives in Claude's live API responses. So rather than show you a
+made-up number, Claude Menubar lets you **calibrate** against what the Claude
+app already tells you:
+
+- **Calibrate Session %** — type the % the Claude app shows; the app maps it to
+  your current token count and displays a live % from then on.
+- **Calibrate reset time** — type Claude Code's "resets in …" and it counts down
+  exactly for the current window (auto-expires and falls back to an estimate
+  when the window rolls over).
+
+Recalibrating is a one-tap menu action any time it drifts.
+
+> **Weekly tracking** (optional) works the same way. Note that `ccusage`'s week
+> is a calendar week, which may not line up exactly with a rolling weekly limit —
+> treat it as an approximation.
+
+## Build from source
+
+```sh
+git clone https://github.com/bestler/claude-menubar
+cd claude-menubar
+./scripts/run-dev.sh          # build & run for development
+./scripts/build-app.sh        # assemble a .app bundle in ./build
 ```
-Sources/ClaudeMenubar/
-  main.swift          NSApplication bootstrap (.accessory policy)
-  AppDelegate.swift   status item, menu, refresh timer, dialogs
-  CCUsage.swift       runner resolution (PATH search) + Process + JSON decode
-  UsageModels.swift   Codable structs, UsageSnapshot, formatters
-  Calibration.swift   UserDefaults-backed calibration store
-  Preferences.swift   display/refresh prefs
-  LoginItem.swift     SMAppService wrapper
-Resources/Info.plist  LSUIElement, bundle id, version
-scripts/              run-dev.sh, build-app.sh
-```
+
+Requires the Swift toolchain (Xcode or Command Line Tools) on macOS 13+.
+
+## License
+
+[MIT](LICENSE)
+
+<div align="center"><sub>
+
+Keywords: Claude usage monitor · Claude Code menu bar · ccusage macOS app ·
+Claude Pro / Max token tracker · session cost & burn rate · usage limit menu bar
+
+</sub></div>
